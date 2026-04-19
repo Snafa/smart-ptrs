@@ -1,0 +1,11 @@
+# JetBrains / CLion
+.idea/
+
+# CMake build directories
+cmake-build-*/
+
+# Archives
+*.zip
+
+# Tools
+tools/
