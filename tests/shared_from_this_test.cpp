@@ -1,4 +1,4 @@
-#include "../shared-from-this/shared.h"
+#include "../shared.h"
 #include "../shared-from-this/weak.h"
 
 #include <catch.hpp>

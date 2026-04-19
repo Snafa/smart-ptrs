@@ -1,44 +1,73 @@
 #pragma once
 
-#include "sw_fwd.h"  // Forward declaration
+#include "shared-from-this/sw_fwd.h"
 
+#include <new>
 #include <cassert>
 #include <cstddef>  // std::nullptr_t
+#include <utility>
 #include <iterator>
+#include <type_traits>
 
-namespace shared_ptr_detail {
+namespace ptr_detail {
 class ControlBlock {
 public:
-    ControlBlock() : count_(0) {
+    ControlBlock() : strong_count_(0), weak_count_(0) {
     }
 
-    ControlBlock(const size_t count) : count_(count) {
+    explicit ControlBlock(const size_t strong) : strong_count_(strong), weak_count_(1) {
     }
 
     ControlBlock(const ControlBlock&) = delete;
 
     virtual ~ControlBlock() = default;
 
-    void Disconnect() {
-        if (--count_ == 0) {
+    void SharedDisconnect() {
+        assert(strong_count_ > 0);
+        if (--strong_count_ == 0) {
             Destroy();
+            if (--weak_count_ == 0) {
+                Delete();
+            }
+        }
+    }
+
+    void WeakDisconnect() {
+        assert(weak_count_ > 0);
+        if (--weak_count_ == 0 && strong_count_ == 0) {
             Delete();
         }
     }
 
-    void Connect() {
-        ++count_;
+    bool TrySharedConnect() {
+        if (strong_count_ == 0) {
+            return false;
+        }
+        ++strong_count_;
+        return true;
     }
 
-    size_t Count() const {
-        return count_;
+    void SharedConnect() {
+        ++strong_count_;
+    }
+
+    void WeakConnect() {
+        ++weak_count_;
+    }
+
+    size_t SharedCount() const {
+        return strong_count_;
+    }
+
+    size_t WeakCount() const {
+        return weak_count_;
     }
 
     virtual void Destroy() = 0;
     virtual void* GetPtrMakeShared() = 0;
 
 private:
-    size_t count_;
+    size_t strong_count_, weak_count_;
 
     void Delete() {
         delete this;
@@ -74,7 +103,7 @@ private:
 template <typename T>
 class PtrControlBlock : public ControlBlock {
 public:
-    PtrControlBlock() : ControlBlock(0), data_(nullptr) {
+    PtrControlBlock() : data_(nullptr) {
     }
 
     template <typename Y>
@@ -96,7 +125,13 @@ public:
 private:
     T* data_;
 };
-};  // namespace shared_ptr_detail
+
+};  // namespace ptr_detail
+
+class EnableSharedFromThisBase {};
+
+template <typename T>
+class EnableSharedFromThis;
 
 // https://en.cppreference.com/w/cpp/memory/shared_ptr
 template <typename T>
@@ -112,25 +147,27 @@ public:
     }
 
     template <typename Y>
-    explicit SharedPtr(Y* ptr) : ptr_(ptr), data_(new shared_ptr_detail::PtrControlBlock<Y>(ptr)) {
+    explicit SharedPtr(Y* ptr) : ptr_(ptr), data_(new ptr_detail::PtrControlBlock<Y>(ptr)) {
+        if constexpr (std::is_convertible_v<Y*, EnableSharedFromThisBase*>) {
+            InitWeakThis(ptr);
+        }
     }
 
     template <typename Y>
     SharedPtr(const SharedPtr<Y>& other) : ptr_(other.GetPtr()), data_(other.GetData()) {
-        if (*this) {
-            GetData()->Connect();
+        if (GetData()) {
+            GetData()->SharedConnect();
         }
     }
 
     SharedPtr(const SharedPtr& other) : ptr_(other.GetPtr()), data_(other.GetData()) {
-        if (*this) {
-            GetData()->Connect();
+        if (GetData()) {
+            GetData()->SharedConnect();
         }
     }
 
     template <typename Y>
-    SharedPtr(SharedPtr<Y>&& other)
-        : ptr_(std::move(other.GetPtr())), data_(std::move(other.GetData())) {
+    SharedPtr(SharedPtr<Y>&& other) : ptr_(other.GetPtr()), data_(other.GetData()) {
         other.ptr_ = nullptr;
         other.data_ = nullptr;
     }
@@ -139,15 +176,18 @@ public:
     // #8 from https://en.cppreference.com/w/cpp/memory/shared_ptr/shared_ptr
     template <typename Y>
     SharedPtr(const SharedPtr<Y>& other, T* ptr) : ptr_(ptr), data_(other.GetData()) {
-        assert(GetData());
-        if (*this) {
-            GetData()->Connect();
+        if (GetData()) {
+            GetData()->SharedConnect();
         }
     }
 
     // Promote `WeakPtr`
     // #11 from https://en.cppreference.com/w/cpp/memory/shared_ptr/shared_ptr
-    explicit SharedPtr(const WeakPtr<T>& other);
+    explicit SharedPtr(const WeakPtr<T>& other) : SharedPtr(other.Lock()) {
+        if (!GetData()) {
+            throw BadWeakPtr{};
+        }
+    }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // `operator=`-s
@@ -157,8 +197,8 @@ public:
             Reset();
             GetPtr() = other.GetPtr();
             GetData() = other.GetData();
-            if (*this) {
-                GetData()->Connect();
+            if (GetData()) {
+                GetData()->SharedConnect();
             }
         }
         return *this;
@@ -182,24 +222,25 @@ public:
     // Modifiers
 
     void Reset() {
-        if (*this) {
+        if (GetData()) {
             GetPtr() = nullptr;
-            GetData()->Disconnect();
+            GetData()->SharedDisconnect();
             GetData() = nullptr;
         }
     }
 
     template <typename Y>
     void Reset(Y* ptr) {
-        if (*this) {
-            GetData()->Disconnect();
+        if (GetData()) {
+            GetData()->SharedDisconnect();
         }
         GetPtr() = ptr;
-        GetData() = ptr ? new shared_ptr_detail::PtrControlBlock<Y>(ptr) : nullptr;
+        GetData() = ptr ? new ptr_detail::PtrControlBlock<Y>(ptr) : nullptr;
     }
 
     void Swap(SharedPtr& other) {
-        std::swap(*this, other);
+        std::swap(ptr_, other.ptr_);
+        std::swap(data_, other.data_);
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -208,28 +249,37 @@ public:
     T* Get() const {
         return GetPtr();
     }
+
     T& operator*() const {
         return *GetPtr();
     }
+
     T* operator->() const {
         return GetPtr();
     }
+
     size_t UseCount() const {
-        return !*this ? 0 : GetData()->Count();
+        return !GetData() ? 0 : GetData()->SharedCount();
     }
+
     explicit operator bool() const {
         return GetPtr() != nullptr;
     }
 
+    template <typename Y>
+    bool operator==(const SharedPtr<Y>& other) const {
+        return GetPtr() == other.GetPtr() && GetData() == other.GetData();
+    }
+
 private:
     T* ptr_;
-    shared_ptr_detail::ControlBlock* data_;
+    ptr_detail::ControlBlock* data_;
 
     T*& GetPtr() {
         return ptr_;
     }
 
-    shared_ptr_detail::ControlBlock*& GetData() {
+    ptr_detail::ControlBlock*& GetData() {
         return data_;
     }
 
@@ -237,40 +287,62 @@ private:
         return ptr_;
     }
 
-    shared_ptr_detail::ControlBlock* GetData() const {
+    ptr_detail::ControlBlock* GetData() const {
         return data_;
     }
 
-    SharedPtr(T* ptr, shared_ptr_detail::ControlBlock* data) : ptr_(ptr), data_(data) {
+    SharedPtr(T* ptr, ptr_detail::ControlBlock* data) : ptr_(ptr), data_(data) {
     }
 
     template <typename U, typename... A>
     friend SharedPtr<U> MakeShared(A&&...);
 
+    template <typename Y>
+    void InitWeakThis(EnableSharedFromThis<Y>* e) {
+        e->weak_this = *this;
+    }
+
     template <typename U>
     friend class SharedPtr;
-};
 
-template <typename T, typename U>
-inline bool operator==(const SharedPtr<T>& left, const SharedPtr<U>& right) {
-    return left.GetPtr() == right.GetPtr() && left.GetData() == right.GetData();
-}
+    template <typename U>
+    friend class WeakPtr;
+};
 
 // Allocate memory only once
 template <typename T, typename... Args>
 SharedPtr<T> MakeShared(Args&&... args) {
-    auto* data = new shared_ptr_detail::MakeSharedControlBlock<T>(std::forward<Args>(args)...);
+    auto* data = new ptr_detail::MakeSharedControlBlock<T>(std::forward<Args>(args)...);
     auto* ptr = static_cast<T*>(data->GetPtrMakeShared());
-    return SharedPtr<T>(ptr, data);
+    SharedPtr<T> shared(ptr, data);
+    if constexpr (std::is_convertible_v<T*, EnableSharedFromThisBase*>) {
+        shared.InitWeakThis(ptr);
+    }
+    return shared;
 }
 
-// Look for usage examples in tests
 template <typename T>
-class EnableSharedFromThis {
+class EnableSharedFromThis : public EnableSharedFromThisBase {
 public:
-    SharedPtr<T> SharedFromThis();
-    SharedPtr<const T> SharedFromThis() const;
+    SharedPtr<T> SharedFromThis() {
+        return weak_this.Lock();
+    }
 
-    WeakPtr<T> WeakFromThis() noexcept;
-    WeakPtr<const T> WeakFromThis() const noexcept;
+    SharedPtr<const T> SharedFromThis() const {
+        return weak_this.Lock();
+    }
+
+    WeakPtr<T> WeakFromThis() noexcept {
+        return weak_this;
+    }
+
+    WeakPtr<const T> WeakFromThis() const noexcept {
+        return weak_this;
+    }
+
+protected:
+    WeakPtr<T> weak_this;
+
+    template <typename Y>
+    friend class SharedPtr;
 };
