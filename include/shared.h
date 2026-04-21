@@ -341,7 +341,7 @@ public:
     }
 
     SharedPtr<const T> SharedFromThis() const {
-        return SharedPtr<T>(weak_this);
+        return SharedPtr<const T>(weak_this);
     }
 
     WeakPtr<T> WeakFromThis() noexcept {
