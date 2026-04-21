@@ -1,7 +1,7 @@
 #include "../include/shared.h"
 #include "../include/weak.h"
 
-#include <common/my_int.h>
+#include <my_int.h>
 
 #include <catch.hpp>
 
