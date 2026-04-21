@@ -98,7 +98,7 @@ namespace ptr_detail {
         }
 
     private:
-        alignas(alignof(T)) std::byte data_[sizeof(T)];
+        alignas(alignof(T)) std::byte data_[sizeof(T)]{};
     };
 
     template<typename T>
@@ -147,10 +147,22 @@ public:
     SharedPtr(std::nullptr_t) : ptr_(nullptr), data_(nullptr) {
     }
 
-    template<typename Y>
-    explicit SharedPtr(Y *ptr) : ptr_(ptr), data_(new ptr_detail::PtrControlBlock<Y>(ptr)) {
-        if constexpr (std::is_convertible_v<Y *, EnableSharedFromThisBase *>) {
-            InitWeakThis(ptr);
+    template<class Y>
+    explicit SharedPtr(Y *ptr) : ptr_(nullptr), data_(nullptr) {
+        if (ptr == nullptr) {
+            return;
+        }
+
+        try {
+            data_ = new ptr_detail::PtrControlBlock<Y>(ptr);
+            ptr_ = ptr;
+
+            if constexpr (std::is_convertible_v<Y *, EnableSharedFromThisBase *>) {
+                InitWeakThis(ptr);
+            }
+        } catch (...) {
+            delete ptr;
+            throw;
         }
     }
 
@@ -230,13 +242,10 @@ public:
         }
     }
 
-    template<typename Y>
+    template<class Y>
     void Reset(Y *ptr) {
-        if (GetData()) {
-            GetData()->SharedDisconnect();
-        }
-        GetPtr() = ptr;
-        GetData() = ptr ? new ptr_detail::PtrControlBlock<Y>(ptr) : nullptr;
+        SharedPtr tmp(ptr);
+        Swap(tmp);
     }
 
     void Swap(SharedPtr &other) {
@@ -298,9 +307,11 @@ private:
     template<typename U, typename... A>
     friend SharedPtr<U> MakeShared(A &&...);
 
-    template<typename Y>
-    void InitWeakThis(EnableSharedFromThis<Y> *e) {
-        e->weak_this = *this;
+    template<class U>
+    void InitWeakThis(EnableSharedFromThis<U> *e) {
+        if (e != nullptr && e->weak_this.Expired()) {
+            e->weak_this = *this;
+        }
     }
 
     template<typename U>
@@ -326,11 +337,11 @@ template<typename T>
 class EnableSharedFromThis : public EnableSharedFromThisBase {
 public:
     SharedPtr<T> SharedFromThis() {
-        return weak_this.Lock();
+        return SharedPtr<T>(weak_this);
     }
 
     SharedPtr<const T> SharedFromThis() const {
-        return weak_this.Lock();
+        return SharedPtr<T>(weak_this);
     }
 
     WeakPtr<T> WeakFromThis() noexcept {
