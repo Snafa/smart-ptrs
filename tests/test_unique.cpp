@@ -13,6 +13,7 @@
 
 struct Person {
     virtual int GetFavoriteNumber() const = 0;
+
     virtual ~Person() = default;
 };
 
@@ -28,7 +29,10 @@ struct Bob : Person {
     }
 };
 
-TEST_CASE("Basic") {
+TEST_CASE (
+"Basic"
+)
+ {
     SECTION("Lifetime") {
         {
             UniquePtr<MyInt> s(new MyInt);
@@ -101,7 +105,10 @@ TEST_CASE("Basic") {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-TEST_CASE("Modifiers") {
+TEST_CASE (
+"Modifiers"
+)
+ {
     SECTION("Release") {
         UniquePtr<MyInt> s(new MyInt(42));
         MyInt* ps = s.Get();
@@ -229,7 +236,10 @@ TEST_CASE("Modifiers") {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-TEST_CASE("Observers") {
+TEST_CASE (
+"Observers"
+)
+ {
     SECTION("Dereference") {
         UniquePtr<int> p(new int(3));
 
@@ -282,7 +292,10 @@ TEST_CASE("Observers") {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-TEST_CASE("Construction with deleters") {
+TEST_CASE (
+"Construction with deleters"
+)
+ {
     SECTION("From copyable deleter") {
         const CopyableDeleter<MyInt> cd;
         UniquePtr<MyInt, CopyableDeleter<MyInt>> s(new MyInt, cd);
@@ -307,7 +320,10 @@ TEST_CASE("Construction with deleters") {
     }
 }
 
-TEST_CASE("Swap with deleters") {
+TEST_CASE (
+"Swap with deleters"
+)
+ {
     SECTION("If storing deleter by value") {
         MyInt* p1 = new MyInt(1);
         UniquePtr<MyInt, Deleter<MyInt>> s1(p1, Deleter<MyInt>(1));
@@ -335,7 +351,10 @@ TEST_CASE("Swap with deleters") {
     }
 }
 
-TEST_CASE("Moving deleters") {
+TEST_CASE (
+"Moving deleters"
+)
+ {
     SECTION("Move with custom deleter") {
         UniquePtr<MyInt, Deleter<MyInt>> s1(new MyInt, Deleter<MyInt>(5));
         MyInt* p = s1.Get();
@@ -355,7 +374,10 @@ TEST_CASE("Moving deleters") {
     }
 }
 
-TEST_CASE("GetDeleter") {
+TEST_CASE (
+"GetDeleter"
+)
+ {
     SECTION("Get deleter") {
         UniquePtr<MyInt, Deleter<MyInt>> p;
 
@@ -372,12 +394,15 @@ TEST_CASE("GetDeleter") {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 struct VoidPtrDeleter {
-    void operator()(void* ptr) {
+    void operator()(void *ptr) {
         free(ptr);
     }
 };
 
-TEST_CASE("UniquePtr<void, VoidPtrDeleter>") {
+TEST_CASE (
+"UniquePtr<void, VoidPtrDeleter>"
+)
+ {
     SECTION("It compiles!") {
         UniquePtr<void, VoidPtrDeleter> p(malloc(100));
     }
@@ -385,7 +410,10 @@ TEST_CASE("UniquePtr<void, VoidPtrDeleter>") {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-TEST_CASE("Array specialization") {
+TEST_CASE (
+"Array specialization"
+)
+ {
     SECTION("delete[] is called") {
         UniquePtr<MyInt[]> u(new MyInt[100]);
         REQUIRE(MyInt::AliveCount() == 100);
@@ -417,22 +445,25 @@ TEST_CASE("Array specialization") {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-template <typename T>
-void DeleteFunction(T* ptr) {
+template<typename T>
+void DeleteFunction(T *ptr) {
     delete ptr;
 }
 
-template <typename T>
+template<typename T>
 struct StatefulDeleter {
     int some_useless_field = 0;
 
-    void operator()(T* ptr) {
+    void operator()(T *ptr) {
         delete ptr;
         ++some_useless_field;
     }
 };
 
-TEST_CASE("Compressed pair usage") {
+TEST_CASE (
+"Compressed pair usage"
+)
+ {
 
     SECTION("Stateless struct deleter") {
         static_assert(sizeof(UniquePtr<int>) == sizeof(void*));
@@ -467,10 +498,14 @@ TEST_CASE("Compressed pair usage") {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-template <typename T>
-class DerivedDeleter : public Deleter<T> {};
+template<typename T>
+class DerivedDeleter : public Deleter<T> {
+};
 
-TEST_CASE("Upcasts") {
+TEST_CASE (
+"Upcasts"
+)
+ {
     SECTION("Upcast ptr in move constructor") {
         std::vector<UniquePtr<Person>> v;
         UniquePtr<Alice> alice(new Alice);

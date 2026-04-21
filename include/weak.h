@@ -4,7 +4,7 @@
 #include "shared.h"
 
 // https://en.cppreference.com/w/cpp/memory/weak_ptr
-template <typename T>
+template<typename T>
 class WeakPtr {
 public:
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -13,27 +13,27 @@ public:
     WeakPtr() : ptr_(nullptr), data_(nullptr) {
     }
 
-    WeakPtr(const WeakPtr& other) : ptr_(other.GetPtr()), data_(other.GetData()) {
+    WeakPtr(const WeakPtr &other) : ptr_(other.GetPtr()), data_(other.GetData()) {
         if (GetData()) {
             GetData()->WeakConnect();
         }
     }
 
-    template <typename Y>
-    WeakPtr(const WeakPtr<Y>& other) : ptr_(other.GetPtr()), data_(other.GetData()) {
+    template<typename Y>
+    WeakPtr(const WeakPtr<Y> &other) : ptr_(other.GetPtr()), data_(other.GetData()) {
         if (GetData()) {
             GetData()->WeakConnect();
         }
     }
 
-    template <typename Y>
-    WeakPtr(WeakPtr<Y>&& other) : ptr_(other.GetPtr()), data_(other.GetData()) {
+    template<typename Y>
+    WeakPtr(WeakPtr<Y> &&other) : ptr_(other.GetPtr()), data_(other.GetData()) {
         other.ptr_ = nullptr;
         other.data_ = nullptr;
     }
 
-    template <typename Y>
-    WeakPtr(const SharedPtr<Y>& other) : ptr_(other.GetPtr()), data_(other.GetData()) {
+    template<typename Y>
+    WeakPtr(const SharedPtr<Y> &other) : ptr_(other.GetPtr()), data_(other.GetData()) {
         if (GetData()) {
             GetData()->WeakConnect();
         }
@@ -41,7 +41,7 @@ public:
 
     // Demote `SharedPtr`
     // #2 from https://en.cppreference.com/w/cpp/memory/weak_ptr/weak_ptr
-    WeakPtr(const SharedPtr<T>& other) : ptr_(other.GetPtr()), data_(other.GetData()) {
+    WeakPtr(const SharedPtr<T> &other) : ptr_(other.GetPtr()), data_(other.GetData()) {
         if (GetData()) {
             GetData()->WeakConnect();
         }
@@ -50,7 +50,7 @@ public:
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // `operator=`-s
 
-    WeakPtr& operator=(const WeakPtr& other) {
+    WeakPtr &operator=(const WeakPtr &other) {
         if (this != &other) {
             Reset();
             GetPtr() = other.GetPtr();
@@ -62,7 +62,7 @@ public:
         return *this;
     }
 
-    WeakPtr& operator=(WeakPtr&& other) {
+    WeakPtr &operator=(WeakPtr &&other) {
         Reset();
         std::swap(this->GetData(), other.GetData());
         std::swap(this->GetPtr(), other.GetPtr());
@@ -87,7 +87,7 @@ public:
         }
     }
 
-    void Swap(WeakPtr& other) {
+    void Swap(WeakPtr &other) {
         std::swap(ptr_, other.ptr_);
         std::swap(data_, other.data_);
     }
@@ -114,25 +114,25 @@ public:
     }
 
 private:
-    T* ptr_;
-    ptr_detail::ControlBlock* data_;
+    T *ptr_;
+    ptr_detail::ControlBlock *data_;
 
-    T*& GetPtr() {
+    T *&GetPtr() {
         return ptr_;
     }
 
-    ptr_detail::ControlBlock*& GetData() {
+    ptr_detail::ControlBlock *&GetData() {
         return data_;
     }
 
-    T* GetPtr() const {
+    T *GetPtr() const {
         return ptr_;
     }
 
-    ptr_detail::ControlBlock* GetData() const {
+    ptr_detail::ControlBlock *GetData() const {
         return data_;
     }
 
-    template <typename U>
+    template<typename U>
     friend class WeakPtr;
 };

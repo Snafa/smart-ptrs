@@ -3,10 +3,11 @@
 #include <exception>
 
 // Instead of std::bad_weak_ptr
-class BadWeakPtr : public std::exception {};
+class BadWeakPtr : public std::exception {
+};
 
-template <typename T>
+template<typename T>
 class SharedPtr;
 
-template <typename T>
+template<typename T>
 class WeakPtr;

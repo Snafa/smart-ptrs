@@ -1,5 +1,5 @@
-#include "../shared-from-this/shared.h"
-#include "../shared-from-this/weak.h"
+#include "../include/shared.h"
+#include "../include/weak.h"
 
 #include <common/my_int.h>
 

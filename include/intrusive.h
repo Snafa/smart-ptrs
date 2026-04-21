@@ -22,28 +22,28 @@ private:
 };
 
 struct DefaultDelete {
-    template <typename T>
-    static void Destroy(T* object) {
+    template<typename T>
+    static void Destroy(T *object) {
         delete object;
     }
 };
 
-template <typename Derived, typename Counter, typename Deleter>
+template<typename Derived, typename Counter, typename Deleter>
 class RefCounted {
 public:
     RefCounted() = default;
 
-    RefCounted(const RefCounted&) noexcept {
+    RefCounted(const RefCounted &) noexcept {
     }
 
-    RefCounted(RefCounted&&) noexcept {
+    RefCounted(RefCounted &&) noexcept {
     }
 
-    RefCounted& operator=(const RefCounted&) noexcept {
+    RefCounted &operator=(const RefCounted &) noexcept {
         return *this;
     }
 
-    RefCounted& operator=(RefCounted&&) noexcept {
+    RefCounted &operator=(RefCounted &&) noexcept {
         return *this;
     }
 
@@ -56,7 +56,7 @@ public:
     // Destroy object using Deleter when the last instance dies.
     void DecRef() {
         if (counter_.DecRef() == 0) {
-            Deleter::template Destroy<Derived>(static_cast<Derived*>(this));
+            Deleter::template Destroy<Derived>(static_cast<Derived *>(this));
         }
     }
 
@@ -69,57 +69,61 @@ private:
     Counter counter_;
 };
 
-template <typename Derived, typename D = DefaultDelete>
+template<typename Derived, typename D = DefaultDelete>
 using SimpleRefCounted = RefCounted<Derived, SimpleCounter, D>;
 
-template <typename T>
+template<typename T>
 class IntrusivePtr {
-    template <typename Y>
+    template<typename Y>
     friend class IntrusivePtr;
 
-    T* ptr_;
+    T *ptr_;
 
 public:
     // Constructors
     IntrusivePtr() : ptr_(nullptr) {
     }
+
     IntrusivePtr(std::nullptr_t) : ptr_(nullptr) {
     }
-    IntrusivePtr(T* ptr) : ptr_(ptr) {
+
+    IntrusivePtr(T *ptr) : ptr_(ptr) {
         if (ptr_ != nullptr) {
             ptr_->IncRef();
         }
     }
 
-    template <typename Y>
-    IntrusivePtr(const IntrusivePtr<Y>& other) : ptr_(other.ptr_) {
+    template<typename Y>
+    IntrusivePtr(const IntrusivePtr<Y> &other) : ptr_(other.ptr_) {
         if (ptr_ != nullptr) {
             ptr_->IncRef();
         }
     }
 
-    template <typename Y>
-    IntrusivePtr(IntrusivePtr<Y>&& other) : ptr_(other.ptr_) {
+    template<typename Y>
+    IntrusivePtr(IntrusivePtr<Y> &&other) : ptr_(other.ptr_) {
         other.ptr_ = nullptr;
     }
 
-    IntrusivePtr(const IntrusivePtr& other) : ptr_(other.ptr_) {
+    IntrusivePtr(const IntrusivePtr &other) : ptr_(other.ptr_) {
         if (ptr_ != nullptr) {
             ptr_->IncRef();
         }
     }
-    IntrusivePtr(IntrusivePtr&& other) noexcept : ptr_(other.ptr_) {
+
+    IntrusivePtr(IntrusivePtr &&other) noexcept : ptr_(other.ptr_) {
         other.ptr_ = nullptr;
     }
 
     // `operator=`-s
-    IntrusivePtr& operator=(const IntrusivePtr& other) {
+    IntrusivePtr &operator=(const IntrusivePtr &other) {
         if (this != &other) {
             Reset(other.ptr_);
         }
         return *this;
     }
-    IntrusivePtr& operator=(IntrusivePtr&& other) noexcept {
+
+    IntrusivePtr &operator=(IntrusivePtr &&other) noexcept {
         if (this != &other) {
             Reset();
             std::swap(ptr_, other.ptr_);
@@ -143,7 +147,7 @@ public:
         }
     }
 
-    void Reset(T* ptr) {
+    void Reset(T *ptr) {
         if (ptr != ptr_) {
             if (ptr_ != nullptr) {
                 ptr_->DecRef();
@@ -155,20 +159,20 @@ public:
         }
     }
 
-    void Swap(IntrusivePtr& other) {
+    void Swap(IntrusivePtr &other) {
         std::swap(ptr_, other.ptr_);
     }
 
     // Observers
-    T* Get() const {
+    T *Get() const {
         return ptr_;
     }
 
-    T& operator*() const {
+    T &operator*() const {
         return *ptr_;
     }
 
-    T* operator->() const {
+    T *operator->() const {
         return ptr_;
     }
 
@@ -181,7 +185,7 @@ public:
     }
 };
 
-template <typename T, typename... Args>
-IntrusivePtr<T> MakeIntrusive(Args&&... args) {
+template<typename T, typename... Args>
+IntrusivePtr<T> MakeIntrusive(Args &&... args) {
     return IntrusivePtr<T>(new T(std::forward<Args>(args)...));
 }

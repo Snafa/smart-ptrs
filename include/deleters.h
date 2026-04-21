@@ -3,7 +3,7 @@
 #include <cassert>
 #include <type_traits>
 
-template <class T>
+template<class T>
 class Deleter {
 public:
     Deleter() = default;
@@ -11,15 +11,15 @@ public:
     Deleter(int tag) : tag_(tag) {
     }
 
-    Deleter(const Deleter&) = delete;
+    Deleter(const Deleter &) = delete;
 
-    Deleter(Deleter&& rhs) noexcept : tag_(rhs.tag_) {
+    Deleter(Deleter &&rhs) noexcept : tag_(rhs.tag_) {
         rhs.tag_ = 0;
     }
 
-    Deleter& operator=(const Deleter&) = delete;
+    Deleter &operator=(const Deleter &) = delete;
 
-    Deleter& operator=(Deleter&& r) noexcept {
+    Deleter &operator=(Deleter &&r) noexcept {
         tag_ = r.tag_;
         r.tag_ = 0;
         return *this;
@@ -31,7 +31,7 @@ public:
         return tag_;
     }
 
-    void operator()(T* p) const {
+    void operator()(T *p) const {
         static_assert(sizeof(T) > 0);
         static_assert(!std::is_void<T>::value);
         delete p;
@@ -55,7 +55,7 @@ private:
     mutable bool was_called_ = false;
 };
 
-template <class T>
+template<class T>
 class Deleter<T[]> {
 public:
     Deleter() = default;
@@ -63,15 +63,15 @@ public:
     Deleter(int tag) : tag_(tag) {
     }
 
-    Deleter(const Deleter&) = delete;
+    Deleter(const Deleter &) = delete;
 
-    Deleter(Deleter&& rhs) noexcept : tag_(rhs.tag_) {
+    Deleter(Deleter &&rhs) noexcept : tag_(rhs.tag_) {
         rhs.tag_ = 0;
     }
 
-    Deleter& operator=(const Deleter&) = delete;
+    Deleter &operator=(const Deleter &) = delete;
 
-    Deleter& operator=(Deleter&& r) noexcept {
+    Deleter &operator=(Deleter &&r) noexcept {
         tag_ = r.tag_;
         r.tag_ = 0;
         return *this;
@@ -83,7 +83,7 @@ public:
         return tag_;
     }
 
-    void operator()(T* p) const {
+    void operator()(T *p) const {
         static_assert(sizeof(T) > 0);
         static_assert(!std::is_void<T>::value);
         delete[] p;
@@ -101,7 +101,7 @@ private:
     int tag_ = 0;
 };
 
-template <typename T>
+template<typename T>
 class CopyableDeleter {
 public:
     CopyableDeleter() = default;
@@ -109,15 +109,15 @@ public:
     CopyableDeleter(int tag) : tag_(tag) {
     }
 
-    CopyableDeleter(const CopyableDeleter&) = default;
+    CopyableDeleter(const CopyableDeleter &) = default;
 
-    CopyableDeleter(CopyableDeleter&& rhs) noexcept : tag_(rhs.tag_) {
+    CopyableDeleter(CopyableDeleter &&rhs) noexcept : tag_(rhs.tag_) {
         rhs.tag_ = 0;
     }
 
-    CopyableDeleter& operator=(const CopyableDeleter&) = default;
+    CopyableDeleter &operator=(const CopyableDeleter &) = default;
 
-    CopyableDeleter& operator=(CopyableDeleter&& r) noexcept {
+    CopyableDeleter &operator=(CopyableDeleter &&r) noexcept {
         tag_ = r.tag_;
         r.tag_ = 0;
         return *this;
@@ -129,7 +129,7 @@ public:
         return tag_;
     }
 
-    void operator()(T* p) const {
+    void operator()(T *p) const {
         static_assert(sizeof(T) > 0);
         static_assert(!std::is_void<T>::value);
         delete p;

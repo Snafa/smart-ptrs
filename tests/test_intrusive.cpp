@@ -1,4 +1,4 @@
-#include "../intrusive/intrusive.h"
+#include "../include/intrusive.h"
 
 #include <catch.hpp>
 
@@ -19,7 +19,10 @@ struct MyString : public SimpleRefCounted<MyString>, public std::string {
     using std::string::basic_string;
 };
 
-TEST_CASE("Empty") {
+TEST_CASE (
+"Empty"
+)
+ {
     SECTION("Sizeof") {
         REQUIRE(sizeof(IntrusivePtr<MyInt>) == sizeof(void*));
     }
@@ -37,7 +40,10 @@ TEST_CASE("Empty") {
     }
 }
 
-TEST_CASE("Copy/move") {
+TEST_CASE (
+"Copy/move"
+)
+ {
     SECTION("Constructors") {
         IntrusivePtr<MyString> a{new MyString{"abacaba"}};
         IntrusivePtr<MyString> b = a;
@@ -87,7 +93,10 @@ TEST_CASE("Copy/move") {
     }
 }
 
-TEST_CASE("Conversions") {
+TEST_CASE (
+"Conversions"
+)
+ {
     struct Foo : SimpleRefCounted<Foo> {
         virtual ~Foo() = default;
         virtual int Kek() = 0;
@@ -110,7 +119,7 @@ TEST_CASE("Conversions") {
     REQUIRE(foo->Kek() == 42);
 }
 
-template <typename T>
+template<typename T>
 class ObjectCounters {
 public:
     ObjectCounters() {
@@ -144,7 +153,10 @@ struct CountedString : std::string, ObjectCounters<CountedString>, SimpleRefCoun
     using std::string::basic_string;
 };
 
-TEST_CASE("Modifiers") {
+TEST_CASE (
+"Modifiers"
+)
+ {
     SECTION("Reset()") {
         IntrusivePtr<CountedString> p{new CountedString{}};
         REQUIRE(CountedString::NumAlive() == 1);
@@ -193,7 +205,10 @@ TEST_CASE("Modifiers") {
     }
 }
 
-TEST_CASE("Observers") {
+TEST_CASE (
+"Observers"
+)
+ {
     struct IntrusivePair : SimpleRefCounted<IntrusivePair> {
         int first;
         int second;
@@ -241,7 +256,10 @@ TEST_CASE("Observers") {
     }
 }
 
-TEST_CASE("From raw pointer") {
+TEST_CASE (
+"From raw pointer"
+)
+ {
     MyString* str = new MyString{"Molodoy Krakodil khochet zavesti sebe druzey"};
     IntrusivePtr<MyString> a{str};
     IntrusivePtr<MyString> b{str};
@@ -254,11 +272,13 @@ struct Pinned : SimpleRefCounted<Pinned> {
     Pinned(int tag) : tag_(tag) {
     }
 
-    Pinned(const Pinned& a) = delete;
-    Pinned(Pinned&& a) = delete;
+    Pinned(const Pinned &a) = delete;
 
-    Pinned& operator=(const Pinned& a) = delete;
-    Pinned& operator=(Pinned&& a) = delete;
+    Pinned(Pinned &&a) = delete;
+
+    Pinned &operator=(const Pinned &a) = delete;
+
+    Pinned &operator=(Pinned &&a) = delete;
 
     ~Pinned() = default;
 
@@ -270,20 +290,23 @@ private:
     int tag_;
 };
 
-TEST_CASE("No copies") {
+TEST_CASE (
+"No copies"
+)
+ {
     IntrusivePtr<Pinned> p(new Pinned(1));
 }
 
-template <typename T>
+template<typename T>
 class ObjectInPool;
 
-template <typename T>
+template<typename T>
 class ObjectPool {
     static_assert(std::is_base_of_v<ObjectInPool<T>, T>, "Unsupported type");
 
 public:
-    template <typename... Args>
-    IntrusivePtr<T> Allocate(Args&&... args) {
+    template<typename... Args>
+    IntrusivePtr<T> Allocate(Args &&... args) {
         if (!objects_.empty()) {
             std::unique_ptr<T> ptr = std::move(objects_.back());
             objects_.pop_back();
@@ -292,7 +315,7 @@ public:
         return DoAllocate(std::forward<Args>(args)...);
     }
 
-    void Release(T* ptr) {
+    void Release(T *ptr) {
         objects_.emplace_back(ptr);
     }
 
@@ -305,8 +328,8 @@ public:
     }
 
 private:
-    template <typename... Args>
-    IntrusivePtr<T> DoAllocate(Args&&... args) {
+    template<typename... Args>
+    IntrusivePtr<T> DoAllocate(Args &&... args) {
         ++allocated_;
         std::unique_ptr<T> object = std::make_unique<T>(std::forward<Args>(args)...);
         object->SetHome(this);
@@ -314,11 +337,11 @@ private:
     }
 
 private:
-    std::vector<std::unique_ptr<T>> objects_;
+    std::vector<std::unique_ptr<T> > objects_;
     size_t allocated_ = 0;
 };
 
-template <typename Derived>
+template<typename Derived>
 class ObjectInPool {
 public:
     void IncRef() {
@@ -335,25 +358,28 @@ public:
         return count_;
     }
 
-    void SetHome(ObjectPool<Derived>* pool) {
+    void SetHome(ObjectPool<Derived> *pool) {
         home_ = pool;
     }
 
 private:
     void TakeMeHome() {
-        home_->Release(static_cast<Derived*>(this));
+        home_->Release(static_cast<Derived *>(this));
     }
 
 private:
     size_t count_ = 0;
-    ObjectPool<Derived>* home_;
+    ObjectPool<Derived> *home_;
 };
 
 struct PoolableString : ObjectInPool<PoolableString>, std::string {
     using std::string::basic_string;
 };
 
-TEST_CASE("Object pool") {
+TEST_CASE (
+"Object pool"
+)
+ {
     ObjectPool<PoolableString> strs;
 
     SECTION("Simple") {
