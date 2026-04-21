@@ -64,4 +64,5 @@ add_smart_ptr_test(test_intrusive
 add_smart_ptr_test(test_odr
         SOURCES
         tests/test_odr.cpp
+        tests/odr_helper.cpp
 )
