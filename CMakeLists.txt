@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.16)
 project(smart_ptrs LANGUAGES CXX)
 
 include(CTest)
+enable_testing()
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -33,6 +34,8 @@ function(add_smart_ptr_test target)
         target_compile_options(${target} PRIVATE /W4)
     else()
         target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic)
+        target_compile_options(${target} PRIVATE -fsanitize=address,undefined)
+        target_link_options(${target} PRIVATE -fsanitize=address,undefined)
     endif()
 
     add_test(NAME ${target} COMMAND ${target})

@@ -6,11 +6,21 @@
 
 #include <stdlib.h>
 
-#if defined(__has_feature)
-#if __has_feature(address_sanitizer) || __has_feature(thread_sanitizer)
-#define HAS_SANITIZER
-#include <sanitizer/allocator_interface.h>
-#endif
+#include "allocations_checker.h"
+
+#include <atomic>
+#include <new>
+#include <stdexcept>
+
+#include <stdlib.h>
+
+#if defined(__has_include) && __has_include(<sanitizer/allocator_interface.h>)
+    #if defined(__has_feature)
+        #if __has_feature(address_sanitizer) || __has_feature(thread_sanitizer)
+            #define HAS_SANITIZER
+            #include <sanitizer/allocator_interface.h>
+        #endif
+    #endif
 #endif
 
 std::atomic<size_t> allocations_count{0}, deallocations_count{0};
