@@ -30,12 +30,13 @@ function(add_smart_ptr_test target)
         )
     endif()
 
-    if (MSVC)
-        target_compile_options(${target} PRIVATE /W4)
-    else()
+    if (NOT MSVC)
         target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic)
-        target_compile_options(${target} PRIVATE -fsanitize=address,undefined)
-        target_link_options(${target} PRIVATE -fsanitize=address,undefined)
+
+        if (SMART_PTRS_ENABLE_SANITIZERS)
+            target_compile_options(${target} PRIVATE -fsanitize=address,undefined)
+            target_link_options(${target} PRIVATE -fsanitize=address,undefined)
+        endif()
     endif()
 
     add_test(NAME ${target} COMMAND ${target})

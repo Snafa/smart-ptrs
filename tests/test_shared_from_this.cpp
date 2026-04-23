@@ -69,6 +69,27 @@ TEST_CASE("SharedFromThis") {
         REQUIRE(weak.Expired());
         weak.Reset();
     }
+
+    {
+        T obj;
+        REQUIRE_THROWS_AS(obj.SharedFromThis(), BadWeakPtr);
+    }
+
+    {
+        auto sp = MakeShared<T>();
+        const T& cref = *sp;
+
+        SharedPtr<const T> sp2 = cref.SharedFromThis();
+        REQUIRE(sp2.Get() == sp.Get());
+    }
+
+    {
+        SharedPtr<T> sp;
+        sp.Reset(new T);
+
+        auto sp2 = sp->SharedFromThis();
+        REQUIRE(sp2.Get() == sp.Get());
+    }
 }
 
 TEST_CASE("WeakFromThis") {
