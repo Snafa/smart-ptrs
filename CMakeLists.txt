@@ -75,3 +75,13 @@ add_smart_ptr_test(test_shared_from_this
         SOURCES
         tests/test_shared_from_this.cpp
 )
+
+add_smart_ptr_test(test_allocations_checker
+        WITH_ALLOC_CHECKER
+        SOURCES
+        tests/test_allocations_checker.cpp
+)
+
+set_tests_properties(test_allocations_checker PROPERTIES
+        ENVIRONMENT "ASAN_OPTIONS=allocator_may_return_null=1"
+)

@@ -3,16 +3,7 @@
 #include <atomic>
 #include <new>
 #include <stdexcept>
-
-#include <stdlib.h>
-
-#include "allocations_checker.h"
-
-#include <atomic>
-#include <new>
-#include <stdexcept>
-
-#include <stdlib.h>
+#include <cstdlib>
 
 #if defined(__has_include) && __has_include(<sanitizer/allocator_interface.h>)
     #if defined(__has_feature)
@@ -60,26 +51,34 @@ void FreeHook(const volatile void*) {
 }();
 #else
 void* operator new(size_t size) {
-    void* p = malloc(size);
-    MallocHook(p, size);
-    return p;
+    if (void* p = malloc(size)) {
+        MallocHook(p, size);
+        return p;
+    }
+    throw std::bad_alloc{};
 }
 
 void* operator new(size_t size, const std::nothrow_t&) noexcept {
     void* p = malloc(size);
-    MallocHook(p, size);
+    if (p != nullptr) {
+        MallocHook(p, size);
+    }
     return p;
 }
 
-void* operator new[] (size_t size) {
-    void* p = malloc(size);
-    MallocHook(p, size);
-    return p;
+void* operator new[](size_t size) {
+    if (void* p = malloc(size)) {
+        MallocHook(p, size);
+        return p;
+    }
+    throw std::bad_alloc{};
 }
 
-void* operator new[] (size_t size, const std::nothrow_t&) noexcept {
+void* operator new[](size_t size, const std::nothrow_t&) noexcept {
     void* p = malloc(size);
-    MallocHook(p, size);
+    if (p != nullptr) {
+        MallocHook(p, size);
+    }
     return p;
 }
 
