@@ -69,3 +69,9 @@ add_smart_ptr_test(test_odr
         tests/test_odr.cpp
         tests/odr_helper.cpp
 )
+
+add_smart_ptr_test(test_shared_from_this
+        WITH_ALLOC_CHECKER
+        SOURCES
+        tests/test_shared_from_this.cpp
+)
